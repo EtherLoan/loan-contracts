@@ -51,7 +51,7 @@ contract ComplexLoan is BasicLoan, Time, SimpleInterest, Collateral, Tokenized {
         returns (bool)
     {
         if (block.timestamp > start.add(time.funding) && borrower.principal < requestedCapital)
-        cancel();
+        Cancelled(borrower.id);
         else require(super.fund(_capital));
         
         return true;
@@ -69,7 +69,7 @@ contract ComplexLoan is BasicLoan, Time, SimpleInterest, Collateral, Tokenized {
     {
         require(token.transfer(msg.sender, _capital));
 
-        Withdraw(_capital);
+        Withdrawn(msg.sender, _capital);
 
         return true;
     }
@@ -84,7 +84,7 @@ contract ComplexLoan is BasicLoan, Time, SimpleInterest, Collateral, Tokenized {
     {
         stage = Stages.Canceled;
 
-        Cancel();
+        Cancelled(borrower.id);
 
         return true;
     }
@@ -100,7 +100,7 @@ contract ComplexLoan is BasicLoan, Time, SimpleInterest, Collateral, Tokenized {
         require(token.transfer(msg.sender, borrower.principal));
         stage = Stages.Paying;
         
-        Accept(borrower.principal);
+        Accepted(msg.sender, borrower.principal);
 
         return true;
     }
@@ -120,7 +120,7 @@ contract ComplexLoan is BasicLoan, Time, SimpleInterest, Collateral, Tokenized {
 
         require(token.transferFrom(msg.sender, this, _payment));
 
-        PayBack(_payment);
+        Paid(msg.sender, _payment);
 
         return true;
     }

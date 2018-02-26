@@ -10,13 +10,13 @@ contract BasicLoan is StructureLoan {
     /// @dev Constructor, create a basic loan and set msg.sender as borrower, needs a token ERC20 address.
     /// @param _token is a token ERC20 address.
 
-    function BasicLoan(address _token, address _borrower)
+    function BasicLoan(address _token, address _borrower, uint256 _requestedCapital)
         public
         validAttributes(_token, _borrower)
     {
-
         borrower.id = _borrower;
         token = ERC20(_token);
+        requestedCapital = _requestedCapital;
     }
 
     function begin()
@@ -29,7 +29,7 @@ contract BasicLoan is StructureLoan {
         start = block.timestamp;
         stage = Stages.Funding;
 
-        Init(token, borrower.id);
+        Begun(token, borrower.id, requestedCapital);
 
         return true;
     }
@@ -48,7 +48,6 @@ contract BasicLoan is StructureLoan {
 
         if (requestedCapital > 0 && borrower.principal.add(_capital) > requestedCapital) {
             uint256 excess = borrower.principal.add(_capital).sub(requestedCapital);
-            require(token.transfer(msg.sender, excess));
             capital = _capital.sub(excess);
         } else capital = _capital;
         
@@ -57,7 +56,7 @@ contract BasicLoan is StructureLoan {
 
         require(token.transferFrom(msg.sender, address(this), capital));
 
-        Fund(capital);
+        Funded(msg.sender, capital);
 
         return true;
     }
@@ -73,7 +72,7 @@ contract BasicLoan is StructureLoan {
     {
         require(token.transfer(msg.sender, _capital));
 
-        Withdraw(_capital);
+        Withdrawn(msg.sender, _capital);
 
         return true;
     }
@@ -88,7 +87,7 @@ contract BasicLoan is StructureLoan {
         require(msg.sender == borrower.id || msg.sender == address(this));
         stage = Stages.Canceled;
 
-        Cancel();
+        Cancelled(borrower.id);
 
         return true;
     }
@@ -104,7 +103,7 @@ contract BasicLoan is StructureLoan {
         require(token.transfer(msg.sender, borrower.principal));
         stage = Stages.Paying;
         
-        Accept(borrower.principal);
+        Accepted(msg.sender, borrower.principal);
 
         return true;
     }
@@ -124,7 +123,7 @@ contract BasicLoan is StructureLoan {
 
         require(token.transferFrom(msg.sender, this, _payment));
 
-        PayBack(_payment);
+        Paid(msg.sender, _payment);
 
         return true;
     }

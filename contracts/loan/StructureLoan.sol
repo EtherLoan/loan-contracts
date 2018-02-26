@@ -44,13 +44,13 @@ contract StructureLoan is Ownable, LoanBasic {
     }
 
     modifier isApproved(uint256 _amount) {
-        require(token.allowance(msg.sender, this) >= _amount);
+        require(token.allowance(msg.sender, address(this)) >= _amount);
         _;
     }
 
     modifier stageFund() {
         require(msg.sender != borrower.id);
-        if (requestedCapital > 0) require(borrower.principal <= requestedCapital);
+        if (requestedCapital > 0) require(borrower.principal < requestedCapital);
         _;
     }
 

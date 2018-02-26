@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@tokenfoundry/token-contracts": "^0.0.1",
-    "@etherloan/loan-standard": "^0.0.1",
+    "@etherloan/loan-standard": "^0.0.3",
     "zeppelin-solidity": "^1.6.0"
   },
   "devDependencies": {
