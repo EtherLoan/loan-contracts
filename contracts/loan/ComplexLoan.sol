@@ -1,18 +1,32 @@
 pragma solidity 0.4.18;
 
-import "./StructureLoan.sol";
+import "./BasicLoan.sol";
+import "../features/Time.sol";
+import "../features/SimpleInterest.sol";
+import "../features/Collateral.sol";
+import "../features/Tokenized.sol";
 
 /// @title BasicLoan
 /// @author anibal.catalan@consensys.net andres.junge@consensys.net
-contract BasicLoan is StructureLoan {
+contract ComplexLoan is BasicLoan, Time, SimpleInterest, Collateral, Tokenized {
 
     /// @notice Constructor, create a basic loan and set msg.sender as borrower, needs a token ERC20 address.
     /// @dev Constructor, create a basic loan and set msg.sender as borrower, needs a token ERC20 address.
     /// @param _token is a token ERC20 address.
 
-    function BasicLoan(address _token, address _borrower)
+    function ComplexLoan(
+        address _token,
+        address _borrower,
+        address _loanToken,
+        uint256 _fundingDate,
+        uint256 _payingDate,
+        uint256 _rate,
+        uint256 _decimal)
         public
         validAttributes(_token, _borrower)
+        Collateral(_loanToken)
+        Time(_fundingDate, _payingDate)
+        SimpleInterest(_rate, _decimal)
     {
 
         borrower.id = _borrower;
@@ -21,15 +35,9 @@ contract BasicLoan is StructureLoan {
 
     function begin()
         public
-        onlyOwner
-        atStage(Stages.Init)
         returns (bool)
     {
-        owner = 0x0;
-        start = block.timestamp;
-        stage = Stages.Funding;
-
-        Init(token, borrower.id);
+        require(super.begin());
 
         return true;
     }
@@ -39,26 +47,13 @@ contract BasicLoan is StructureLoan {
     /// @param _capital is the amount of token to contribute.
     function fund(uint256 _capital)
         public
-        atStage(Stages.Funding)
-        isApproved(_capital)
-        stageFund
+        timeFund
         returns (bool)
-    {   
-        uint256 capital;
-
-        if (requestedCapital > 0 && borrower.principal.add(_capital) > requestedCapital) {
-            uint256 excess = borrower.principal.add(_capital).sub(requestedCapital);
-            require(token.transfer(msg.sender, excess));
-            capital = _capital.sub(excess);
-        } else capital = _capital;
+    {
+        if (block.timestamp > start.add(time.funding) && borrower.principal < requestedCapital)
+        cancel();
+        else require(super.fund(_capital));
         
-        lenders[msg.sender].amountInvested = lenders[msg.sender].amountInvested.add(capital);
-        borrower.principal = borrower.principal.add(capital);
-
-        require(token.transferFrom(msg.sender, address(this), capital));
-
-        Fund(capital);
-
         return true;
     }
 
@@ -69,6 +64,7 @@ contract BasicLoan is StructureLoan {
         public
         isLender
         stageWithdraw(_capital)
+        toquenizedWithdraw(_capital)
         returns (bool)
     {
         require(token.transfer(msg.sender, _capital));
@@ -83,9 +79,9 @@ contract BasicLoan is StructureLoan {
     function cancel()
         public
         atStage(Stages.Funding)
+        isBorrower
         returns (bool)
     {
-        require(msg.sender == borrower.id || msg.sender == address(this));
         stage = Stages.Canceled;
 
         Cancel();
@@ -128,4 +124,5 @@ contract BasicLoan is StructureLoan {
 
         return true;
     }
+
 }
